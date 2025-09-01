@@ -1,4 +1,4 @@
--- 🌌 Full Delta Script + TP by Name + SpeedHack + Auto Respawn
+-- 🌌 Full Delta Script + KillAura с Lerp + TP + SpeedHack
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 local function round(obj) local c = Instance.new("UICorner", obj) c.CornerRadius = UDim.new(0,10) end
 local Players = game:GetService("Players")
@@ -7,7 +7,7 @@ local player = Players.LocalPlayer
 
 -- ===== Главное окно =====
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0,220,0,280) -- увеличили для новых кнопок
+MainFrame.Size = UDim2.new(0,220,0,280)
 MainFrame.Position = UDim2.new(0.1,0,0.2,0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 MainFrame.Visible = false
@@ -95,9 +95,10 @@ end
 TpUp.MouseButton1Click:Connect(function() getHRP().CFrame = getHRP().CFrame + Vector3.new(0,100,0) end)
 TpDown.MouseButton1Click:Connect(function() getHRP().CFrame = getHRP().CFrame + Vector3.new(0,-40,0) end)
 
--- Full KillAura
+-- Full KillAura с Lerp (плавное движение)
 local auraEnabled = false
 local currentTarget = nil
+local lerpSpeed = 0.4 -- чем больше, тем быстрее телепорт к цели
 
 KillAura.MouseButton1Click:Connect(function()
     auraEnabled = not auraEnabled
@@ -122,14 +123,14 @@ RunService.Heartbeat:Connect(function()
         currentTarget = closest
     end
     if currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        hrp.CFrame = currentTarget.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
+        local targetPos = currentTarget.Character.HumanoidRootPart.Position + Vector3.new(0,0,3)
+        hrp.CFrame = hrp.CFrame:Lerp(CFrame.new(targetPos), lerpSpeed)
     end
 end)
 
 -- ===== ТП к игроку по нику =====
 TpToPlayerBtn.MouseButton1Click:Connect(function()
-    local name = game:GetService("Players"):GetPlayerFromCharacter(player.Character).Name
-    name = game:GetService("Players"):GetUserInput("Введите ник игрока для ТП:")
+    local name = game:GetService("Players"):GetUserInput("Введите ник игрока для ТП:")
     if not name or name == "" then return end
     local target = Players:FindFirstChild(name)
     if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
@@ -180,7 +181,7 @@ end)
 -- ===== Скрипт после смерти =====
 player.CharacterAdded:Connect(function(char)
     task.wait(1)
-    hrp = char:WaitForChild("HumanoidRootPart")
+    local hrp = char:WaitForChild("HumanoidRootPart")
     local hum = char:FindFirstChildOfClass("Humanoid")
     if hum then
         hum.WalkSpeed = 16 -- сброс спидхака
