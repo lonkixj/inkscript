@@ -1,16 +1,18 @@
--- 🌌 Full Delta Script (рабочий)
+-- 🌌 Full Delta Script + TP by Name + SpeedHack + Auto Respawn
 local ScreenGui = Instance.new("ScreenGui", game.CoreGui)
 local function round(obj) local c = Instance.new("UICorner", obj) c.CornerRadius = UDim.new(0,10) end
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local player = Players.LocalPlayer
 
--- ===== Главное окно (создаём заранее) =====
+-- ===== Главное окно =====
 local MainFrame = Instance.new("Frame", ScreenGui)
-MainFrame.Size = UDim2.new(0,220,0,220)
+MainFrame.Size = UDim2.new(0,220,0,280) -- увеличили для новых кнопок
 MainFrame.Position = UDim2.new(0.1,0,0.2,0)
 MainFrame.BackgroundColor3 = Color3.fromRGB(30,30,30)
 MainFrame.Visible = false
 round(MainFrame)
 
--- Заголовок
 local TitleBar = Instance.new("Frame", MainFrame)
 TitleBar.Size = UDim2.new(1,0,0,30)
 TitleBar.BackgroundColor3 = Color3.fromRGB(40,40,40)
@@ -32,7 +34,6 @@ MinimizeBtn.TextColor3 = Color3.fromRGB(255,255,255)
 MinimizeBtn.BackgroundColor3 = Color3.fromRGB(60,60,60)
 round(MinimizeBtn)
 
--- Кнопки
 local ButtonHolder = Instance.new("Frame", MainFrame)
 ButtonHolder.Size = UDim2.new(1,0,1,-30)
 ButtonHolder.Position = UDim2.new(0,0,0,30)
@@ -52,6 +53,8 @@ end
 local TpUp = makeBtn("⬆️ ТП Вверх", 20)
 local TpDown = makeBtn("⬇️ ТП Вниз", 70)
 local KillAura = makeBtn("⚔️ Смарт Килл-Аура", 120)
+local TpToPlayerBtn = makeBtn("📌 ТП к игроку", 170)
+local SpeedHackBtn = makeBtn("💨 СпидХак", 220)
 
 -- ===== Экран загрузки =====
 local LoadingFrame = Instance.new("Frame", ScreenGui)
@@ -79,22 +82,22 @@ task.spawn(function()
     LoadingFrame:TweenSize(UDim2.new(0,0,0,0),"Out","Quad",0.6,true)
     task.wait(0.6)
     LoadingFrame:Destroy()
-    MainFrame.Visible = true -- показываем главное меню
+    MainFrame.Visible = true
 end)
 
 -- ===== Логика =====
-local player = game.Players.LocalPlayer
-local char = player.Character or player.CharacterAdded:Wait()
-local hrp = char:WaitForChild("HumanoidRootPart")
+local function getHRP()
+    local char = player.Character or player.CharacterAdded:Wait()
+    return char:WaitForChild("HumanoidRootPart")
+end
 
--- ТП
-TpUp.MouseButton1Click:Connect(function() hrp.CFrame = hrp.CFrame + Vector3.new(0,100,0) end)
-TpDown.MouseButton1Click:Connect(function() hrp.CFrame = hrp.CFrame + Vector3.new(0,-40,0) end)
+-- ТП вверх/вниз
+TpUp.MouseButton1Click:Connect(function() getHRP().CFrame = getHRP().CFrame + Vector3.new(0,100,0) end)
+TpDown.MouseButton1Click:Connect(function() getHRP().CFrame = getHRP().CFrame + Vector3.new(0,-40,0) end)
 
 -- Full KillAura
 local auraEnabled = false
 local currentTarget = nil
-local RunService = game:GetService("RunService")
 
 KillAura.MouseButton1Click:Connect(function()
     auraEnabled = not auraEnabled
@@ -103,21 +106,13 @@ KillAura.MouseButton1Click:Connect(function()
 end)
 
 RunService.Heartbeat:Connect(function()
-    if not auraEnabled or not hrp then return end
-
-    if not currentTarget 
-       or not currentTarget.Character 
-       or not currentTarget.Character:FindFirstChild("Humanoid") 
-       or currentTarget.Character.Humanoid.Health <= 0 then
-
+    if not auraEnabled then return end
+    local hrp = getHRP()
+    if not currentTarget or not currentTarget.Character or not currentTarget.Character:FindFirstChild("Humanoid") or currentTarget.Character.Humanoid.Health <= 0 then
         currentTarget = nil
         local closest, dist = nil, 50
-        for _, plr in pairs(game.Players:GetPlayers()) do
-            if plr ~= player 
-            and plr.Character 
-            and plr.Character:FindFirstChild("HumanoidRootPart") 
-            and plr.Character:FindFirstChild("Humanoid") 
-            and plr.Character.Humanoid.Health > 0 then
+        for _, plr in pairs(Players:GetPlayers()) do
+            if plr ~= player and plr.Character and plr.Character:FindFirstChild("HumanoidRootPart") and plr.Character:FindFirstChild("Humanoid") and plr.Character.Humanoid.Health > 0 then
                 local mag = (hrp.Position - plr.Character.HumanoidRootPart.Position).Magnitude
                 if mag < dist then
                     closest, dist = plr, mag
@@ -126,22 +121,38 @@ RunService.Heartbeat:Connect(function()
         end
         currentTarget = closest
     end
-
     if currentTarget and currentTarget.Character and currentTarget.Character:FindFirstChild("HumanoidRootPart") then
-        local enemyHRP = currentTarget.Character.HumanoidRootPart
-        hrp.CFrame = enemyHRP.CFrame * CFrame.new(0,0,3)
+        hrp.CFrame = currentTarget.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3)
     end
 end)
 
--- ===== Перетаскивание (ПК + Телефон) =====
+-- ===== ТП к игроку по нику =====
+TpToPlayerBtn.MouseButton1Click:Connect(function()
+    local name = game:GetService("Players"):GetPlayerFromCharacter(player.Character).Name
+    name = game:GetService("Players"):GetUserInput("Введите ник игрока для ТП:")
+    if not name or name == "" then return end
+    local target = Players:FindFirstChild(name)
+    if target and target.Character and target.Character:FindFirstChild("HumanoidRootPart") then
+        getHRP().CFrame = target.Character.HumanoidRootPart.CFrame + Vector3.new(0,0,3)
+    end
+end)
+
+-- ===== Спидхак =====
+SpeedHackBtn.MouseButton1Click:Connect(function()
+    local speed = tonumber(game:GetService("Players"):GetUserInput("Введите скорость (16-200):"))
+    if not speed then return end
+    speed = math.clamp(speed,16,200)
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if hum then hum.WalkSpeed = speed end
+end)
+
+-- ===== Перетаскивание =====
 local UserInputService = game:GetService("UserInputService")
 local dragging, dragStart, startPos
-
 local function update(input)
     local delta = input.Position - dragStart
     MainFrame.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
 end
-
 TitleBar.InputBegan:Connect(function(input)
     if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
         dragging = true
@@ -152,7 +163,6 @@ TitleBar.InputBegan:Connect(function(input)
         end)
     end
 end)
-
 UserInputService.InputChanged:Connect(function(input)
     if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
         update(input)
@@ -164,5 +174,15 @@ local minimized = false
 MinimizeBtn.MouseButton1Click:Connect(function()
     minimized = not minimized
     ButtonHolder.Visible = not minimized
-    MainFrame:TweenSize(UDim2.new(0,220,0, minimized and 30 or 220),"Out","Quad",0.3,true)
+    MainFrame:TweenSize(UDim2.new(0,220,0, minimized and 30 or 280),"Out","Quad",0.3,true)
+end)
+
+-- ===== Скрипт после смерти =====
+player.CharacterAdded:Connect(function(char)
+    task.wait(1)
+    hrp = char:WaitForChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.WalkSpeed = 16 -- сброс спидхака
+    end
 end)
